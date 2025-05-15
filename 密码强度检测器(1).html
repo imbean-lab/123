@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码强度检测器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .password-container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        #password {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #password:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #7f8c8d;
+            cursor: pointer;
+        }
+        .strength-meter {
+            height: 8px;
+            background-color: #eee;
+            margin-top: 15px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        .feedback {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .strength-feedback {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .requirements {
+            margin-top: 20px;
+        }
+        .requirements h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .requirement-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .requirement-icon {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        .satisfied {
+            color: #27ae60;
+        }
+        .unsatisfied {
+            color: #e74c3c;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .btn-generate {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-generate:hover {
+            background-color: #2980b9;
+        }
+        .btn-copy {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .btn-copy:hover {
+            background-color: #27ae60;
+        }
+        .very-weak {
+            background-color: #e74c3c;
+        }
+        .weak {
+            background-color: #f39c12;
+        }
+        .medium {
+            background-color: #f1c40f;
+        }
+        .strong {
+            background-color: #2ecc71;
+        }
+        .very-strong {
+            background-color: #27ae60;
+        }
+        .feedback-very-weak {
+            background-color: #ffdddd;
+            border-left: 4px solid #e74c3c;
+        }
+        .feedback-weak {
+            background-color: #fff3cd;
+            border-left: 4px solid #f39c12;
+        }
+        .feedback-medium {
+            background-color: #e3f2fd;
+            border-left: 4px solid #3498db;
+        }
+        .feedback-strong {
+            background-color: #d4edda;
+            border-left: 4px solid #2ecc71;
+        }
+        .feedback-very-strong {
+            background-color: #d5f5e3;
+            border-left: 4px solid #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <h1>密码强度检测器</h1>
+    <div class="password-container">
+        <div class="input-group">
+            <input type="password" id="password" placeholder="输入密码..." oninput="checkPasswordStrength()">
+            <button class="toggle-password" onclick="togglePasswordVisibility()">👁️</button>
+        </div>
+        
+        <div class="strength-meter">
+            <div class="strength-bar" id="strengthBar"></div>
+        </div>
+        <div class="strength-feedback">
+            <span>强度: <span id="strengthText">无</span></span>
+            <span id="scoreText">0/10</span>
+        </div>
+        
+        <div class="feedback" id="feedback"></div>
+        
+        <div class="requirements">
+            <h3>密码要求:</h3>
+            <div class="requirement-item">
+                <span class="requirement-icon" id="lengthIcon">❌</span>
+                <span>至少8个字符</span>
+            </div>
+            <div class="requirement-item">
+                <span class="requirement-icon" id="lowercaseIcon">❌</span>
+                <span>包含小写字母</span>
+            </div>
+            <div class="requirement-item">
+                <span class="requirement-icon" id="uppercaseIcon">❌</span>
+                <span>包含大写字母</span>
+            </div>
+            <div class="requirement-item">
+                <span class="requirement-icon" id="numberIcon">❌</span>
+                <span>包含数字</span>
+            </div>
+            <div class="requirement-item">
+                <span class="requirement-icon" id="specialIcon">❌</span>
+                <span>包含特殊字符</span>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button class="btn btn-generate" onclick="generatePassword()">生成强密码</button>
+            <button class="btn btn-copy" onclick="copyPassword()">复制密码</button>
+        </div>
+    </div>
+
+    <script>
+        // 常见弱密码列表
+        const weakPasswords = [
+            '123456', 'password', '12345678', 'qwerty', '123456789',
+            '12345', '1234', '111111', '1234567', 'dragon',
+            '123123', 'admin', 'welcome', 'monkey', 'letmein',
+            'abc123', 'football', 'iloveyou', 'master', 'sunshine',
+            'princess', 'login', 'starwars', 'welcome', 'passw0rd'
+        ];
+
+        // 密码强度检测函数
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            const strengthBar = document.getElementById('strengthBar');
+            const feedback = document.getElementById('feedback');
+            const strengthText = document.getElementById('strengthText');
+            const scoreText = document.getElementById('scoreText');
+            
+            // 初始分数为0
+            let score = 0;
+            let feedbackText = '';
+            
+            // 1. 检查密码长度
+            let lengthScore = 0;
+            if (password.length === 0) {
+                feedbackText = '请输入密码';
+            } else if (password.length < 6) {
+                feedbackText = '密码太短(至少6位)';
+                lengthScore = 1;
+            } else if (password.length < 8) {
+                feedbackText = '密码长度中等(建议至少8位)';
+                lengthScore = 2;
+            } else if (password.length < 12) {
+                feedbackText = '密码长度良好';
+                lengthScore = 3;
+            } else {
+                feedbackText = '密码长度优秀';
+                lengthScore = 4;
+            }
+            score += lengthScore;
+            
+            // 更新长度要求图标
+            document.getElementById('lengthIcon').textContent = password.length >= 8 ? '✔️' : '❌';
+            document.getElementById('lengthIcon').className = password.length >= 8 ? 'requirement-icon satisfied' : 'requirement-icon unsatisfied';
+            
+            // 2. 检查是否包含数字
+            const hasNumber = /\d/.test(password);
+            if (hasNumber) {
+                score += 1;
+                feedbackText += ' | 包含数字';
+            } else {
+                feedbackText += ' | 建议添加数字';
+            }
+            document.getElementById('numberIcon').textContent = hasNumber ? '✔️' : '❌';
+            document.getElementById('numberIcon').className = hasNumber ? 'requirement-icon satisfied' : 'requirement-icon unsatisfied';
+            
+            // 3. 检查是否包含小写字母
+            const hasLowercase = /[a-z]/.test(password);
+            if (hasLowercase) {
+                score += 1;
+                feedbackText += ' | 包含小写字母';
+            } else {
+                feedbackText += ' | 建议添加小写字母';
+            }
+            document.getElementById('lowercaseIcon').textContent = hasLowercase ? '✔️' : '❌';
+            document.getElementById('lowercaseIcon').className = hasLowercase ? 'requirement-icon satisfied' : 'requirement-icon unsatisfied';
+            
+            // 4. 检查是否包含大写字母
+            const hasUppercase = /[A-Z]/.test(password);
+            if (hasUppercase) {
+                score += 1;
+                feedbackText += ' | 包含大写字母';
+            } else {
+                feedbackText += ' | 建议添加大写字母';
+            }
+            document.getElementById('uppercaseIcon').textContent = hasUppercase ? '✔️' : '❌';
+            document.getElementById('uppercaseIcon').className = hasUppercase ? 'requirement-icon satisfied' : 'requirement-icon unsatisfied';
+            
+            // 5. 检查是否包含特殊字符
+            const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+            if (hasSpecial) {
+                score += 1;
+                feedbackText += ' | 包含特殊字符';
+            } else {
+                feedbackText += ' | 建议添加特殊字符(如!@#$等)';
+            }
+            document.getElementById('specialIcon').textContent = hasSpecial ? '✔️' : '❌';
+            document.getElementById('specialIcon').className = hasSpecial ? 'requirement-icon satisfied' : 'requirement-icon unsatisfied';
+            
+            // 6. 检查是否是常见弱密码
+            if (weakPasswords.includes(password.toLowerCase())) {
+                score = 1;
+                feedbackText = '警告: 这是一个常见弱密码，请勿使用!';
+            }
+            
+            // 7. 检查密码多样性 (额外加分)
+            const uniqueChars = new Set(password).size;
+            if (uniqueChars >= 8) score += 1;
+            if (uniqueChars >= 12) score += 1;
+            
+            // 确保分数在0-10范围内
+            score = Math.max(0, Math.min(score, 10));
+            
+            // 根据分数设置强度条样式和反馈
+            let strengthClass = '';
+            let strengthPercentage = (score / 10) * 100;
+            
+            if (score <= 2) {
+                strengthClass = 'very-weak';
+                strengthText.textContent = '非常弱';
+                feedbackText += ' | 强度: 非常弱';
+            } else if (score <= 4) {
+                strengthClass = 'weak';
+                strengthText.textContent = '弱';
+                feedbackText += ' | 强度: 弱';
+            } else if (score <= 6) {
+                strengthClass = 'medium';
+                strengthText.textContent = '中等';
+                feedbackText += ' | 强度: 中等';
+            } else if (score <= 8) {
+                strengthClass = 'strong';
+                strengthText.textContent = '强';
+                feedbackText += ' | 强度: 强';
+            } else {
+                strengthClass = 'very-strong';
+                strengthText.textContent = '非常强';
+                feedbackText += ' | 强度: 非常强';
+            }
+            
+            // 更新界面
+            strengthBar.style.width = strengthPercentage + '%';
+            strengthBar.className = 'strength-bar ' + strengthClass;
+            
+            feedback.textContent = feedbackText;
+            feedback.className = 'feedback feedback-' + strengthClass.replace('very-', '');
+            
+            scoreText.textContent = score + '/10';
+        }
+        
+        // 切换密码可见性
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleButton = document.querySelector('.toggle-password');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleButton.textContent = '😲';
+            } else {
+                passwordInput.type = 'password';
+                toggleButton.textContent = '😌';
+            }
+        }
+        
+        // 生成强密码
+        function generatePassword() {
+            const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+            const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const numbers = '0123456789';
+            const specials = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            let password = '';
+            
+            // 确保每种类型至少有一个字符
+            password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+            password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+            password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+            password += specials.charAt(Math.floor(Math.random() * specials.length));
+            
+            // 添加随机字符使总长度达到12
+            const allChars = lowercase + uppercase + numbers + specials;
+            while (password.length < 12) {
+                password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+            }
+            
+            // 打乱密码顺序
+            password = password.split('').sort(() => 0.5 - Math.random()).join('');
+            
+            // 设置密码并触发检测
+            document.getElementById('password').value = password;
+            checkPasswordStrength();
+        }
+        
+        // 复制密码到剪贴板
+        function copyPassword() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                alert('请先输入密码');
+                return;
+            }
+            
+            navigator.clipboard.writeText(password).then(() => {
+                const copyButton = document.querySelector('.btn-copy');
+                const originalText = copyButton.textContent;
+                copyButton.textContent = '已复制!';
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+    </script>
+</body>
+</html>
